@@ -1,0 +1,99 @@
+#!/bin/bash
+#	Facebook Stalker Script
+#	Pascal König, 2012
+#
+#	need to install:
+#	fbcmd:			http://fbcmd.dtompkins.com/
+#	sendemail:	apt-get install sendemail
+
+name=$1
+anfang=1
+while [ true ]
+do
+	if test ! "$name"
+		then
+			echo "Bitte folgendes Format einhalten: $0 Name_des_Freundes"
+			break
+	fi
+	
+	if [ "$anfang" == "1" ]
+		then
+			while [ true ]
+			do
+				echo "Folgende Freunde sind aktuell mit dem Namen $name ausgewählt."
+				echo "Falls mehrere Freunde verfügbar sind, bitte den Namen weiter eingrenzen."
+				echo ""
+				fbcmd friends "$name"
+				echo ""
+				read -p "Name weiter eingrenzen? (y|N): " antwort
+				echo ""
+				case "$antwort" in
+					y|Y)	read -p "Name des Freundes eingeben: " name
+						;;
+					*)	break
+						;;
+				esac
+				echo ""
+			done
+	fi
+	
+	anfang=0
+	
+	echo "Was willst du tun?"
+	echo "1: Profilinfo von $name anzeigen."
+	echo "2: Online Status von $name prüfen."
+	echo "3: E-Mail schicken sobald $name online ist."
+	echo "4: Bei welchen Events nimmt $name teil?"
+	echo "5: In welchen Gruppen ist $name Mitglied?"
+	echo "6: Zeige mir gemeinsame Freunde mit $name an."
+	echo "7: Alle Bilder auf denen $name markiert ist in Ordner \"/$name/tagged\" speichern."
+	echo "8: Alle Bilder von $name in Ordner \"/$name/owned\" speichern."
+	echo "9: Aktuelles Profilbild von $name in Ordner \"/$name/profile\" speichern."
+	echo "10: Anderen Freund wählen."
+	echo "11: Script beenden."
+	echo ""
+	read -p "Bitte Auswahl eingeben: " wahl
+	echo ""
+	case "$wahl" in
+		1) 	fbcmd allinfo "$name"
+			;;
+		2)	fbcmd finfo online_presence "$name"
+			;;
+		3) 	echo "Ist $name online?"
+				while [ true ]
+				do
+					if fbcmd fonline | grep "$name" 
+					then
+						#Person ist online
+						echo "\"$name\" ist online"
+						sendemail -f sender@web.de -s smtp.web.de:25 -xu USER -xp PASSWORD -t target@gmx.net -o tls=yes -u "$name ist online" -m "$name ist jetzt im Facebook Chat online!"
+						break
+					else
+						#Person ist offline
+						echo "\"$name\" ist offline"
+					fi
+					sleep 60	#1 Minute warten
+				done
+			;;
+		4)	fbcmd fevents "$name"
+			;;
+		5)	fbcmd fgroups "$name"
+			;;
+		6)	fbcmd mutual "$name"
+			;;
+		7)	fbcmd fpics "$name" "./$name/tagged"
+			;;
+		8)	fbcmd opics "$name" "./$name/owned"
+			;;
+		9)	fbcmd ppics "$name" "./$name/profile"
+			;;
+		10)	read -p "Name des Freundes eingeben: " name
+				anfang=1
+			;;
+		11)	break
+			;;
+		*) echo "Befehl nicht erkannt. Programm wird neu gestartet..."
+			;;
+	esac
+	echo ""
+done
